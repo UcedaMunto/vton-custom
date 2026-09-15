@@ -1,0 +1,51 @@
+name: CI (fork comercial)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  compliance-and-tests:
+    name: Gate comercial + pruebas (sin GPU)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar (CPU, extras api+dev)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[api,dev]"
+
+      - name: Gate de cumplimiento comercial (bloqueante)
+        run: python scripts/verify_commercial_readiness.py
+
+      - name: Verificación de licencias y hashes
+        run: python licenses/verify_hashes.py
+
+      - name: No debe quedar ninguna referencia al paquete NC
+        run: |
+          if grep -rn "fashn_human_parser" src/ scripts/ pyproject.toml \
+             | grep -v "src/fashn_vton/compliance.py"; then
+            echo "::error::Se encontró una referencia al paquete de licencia no comercial"; exit 1
+          fi
+
+      - name: Pruebas (sin las de integración que necesitan pesos)
+        run: python -m pytest tests/ -q -m "not integration"
+
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check src scripts tests

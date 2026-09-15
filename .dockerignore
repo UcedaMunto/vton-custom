@@ -1,0 +1,25 @@
+# Contexto de build de la imagen comercial: fuera pesos, datasets y salidas
+# (se montan en tiempo de ejecución y nunca deben hornearse en la imagen).
+weights/
+outputs/
+outputs_*/
+logs/
+debug_outputs/
+*.pt
+*.pth
+*.safetensors
+*.onnx
+*.bin
+.git/
+.github/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+ckpt/
+dataset/
+DressCode/
+*.md.bak
+LEVANTAMIENTO_2026-09-15.md
+PLAN_INTERFAZ_WEB.md

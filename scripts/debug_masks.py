@@ -3,6 +3,11 @@
 Debug script to visualize mask creation in the preprocessing pipeline.
 
 Saves intermediate masks and images to debug_outputs/ directory.
+
+Commercial fork: segmentation comes from a pluggable provider
+(``fashn_vton.segmentation``) instead of ``fashn-human-parser``. The default
+provider (``none``) cannot produce masks, so pass ``--provider pose-heuristic``
+to visualize the heuristic regions derived from DWPose.
 """
 
 import argparse
@@ -16,8 +21,7 @@ from PIL import Image
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from fashn_human_parser import CATEGORY_TO_BODY_COVERAGE, FashnHumanParser
-
+from fashn_vton.dwpose import DWposeDetector
 from fashn_vton.preprocessing import BODY_COVERAGE_TO_FASHN_LABELS, FASHN_LABELS_TO_IDS
 from fashn_vton.preprocessing.masks import (
     asymmetric_dilate_mask,
@@ -25,6 +29,12 @@ from fashn_vton.preprocessing.masks import (
     create_contour_following_mask,
     dilate_mask,
 )
+from fashn_vton.segmentation import (
+    CATEGORY_TO_BODY_COVERAGE,
+    available_providers,
+    build_segmentation_provider,
+)
+from fashn_vton.utils import get_dummy_dw_keypoints
 
 
 def colorize_segmentation(seg_pred: np.ndarray) -> np.ndarray:
@@ -249,6 +259,26 @@ Example:
         default="debug_outputs",
         help="Output directory (default: debug_outputs)",
     )
+    parser.add_argument(
+        "--provider",
+        type=str,
+        default="pose-heuristic",
+        choices=sorted(available_providers()),
+        help="Proveedor de segmentación (default: pose-heuristic, el único con máscaras listo)",
+    )
+    parser.add_argument(
+        "--weights-dir",
+        type=str,
+        default=None,
+        help="Directorio de pesos (default: ./weights)",
+    )
+    parser.add_argument(
+        "--garment-photo-type",
+        type=str,
+        default="flat-lay",
+        choices=["model", "flat-lay"],
+        help="'flat-lay' usa keypoints sintéticos para la prenda (default)",
+    )
     args = parser.parse_args()
 
     # Setup paths
@@ -288,15 +318,38 @@ Example:
     save_image(person_np, output_dir, "00_person_original")
     save_image(garment_np, output_dir, "00_garment_original")
 
-    # Load human parser
-    print("\nLoading FashnHumanParser...")
-    hp_model = FashnHumanParser(device="cpu")
+    # Segmentation provider (commercial fork: no fashn-human-parser)
+    print(f"\nLoading segmentation provider '{args.provider}'...")
+    provider = build_segmentation_provider(args.provider)
+    print(f"  -> {provider.describe()}")
+    if not provider.is_available():
+        print(f"  !! Proveedor no disponible:\n{provider.info.notes}")
+        print(f"  Proveedores registrados: {', '.join(sorted(available_providers()))}")
 
-    # Run segmentation
-    print("Running human parsing on person image...")
-    person_seg = hp_model.predict(person_np)
-    print("Running human parsing on garment image...")
-    garment_seg = hp_model.predict(garment_np)
+    weights_dir = args.weights_dir or os.path.join(repo_dir, "weights")
+    print(f"Loading DWPose from {os.path.join(weights_dir, 'dwpose')}...")
+    pose_model = DWposeDetector(checkpoints_dir=os.path.join(weights_dir, "dwpose"), device="cpu")
+
+    person_pose = pose_model(person_np[..., ::-1])
+    garment_pose = (
+        get_dummy_dw_keypoints()
+        if args.garment_photo_type == "flat-lay"
+        else pose_model(garment_np[..., ::-1])
+    )
+
+    print("Running segmentation on person image...")
+    person_seg = provider.predict(person_np, {"pose": person_pose, "category": args.category, "role": "person"})
+    print("Running segmentation on garment image...")
+    garment_seg = provider.predict(garment_np, {"pose": garment_pose, "category": args.category, "role": "garment"})
+
+    if person_seg is None or garment_seg is None:
+        print(
+            "\nEl proveedor no produjo mapa de clases "
+            f"(persona: {person_seg is not None}, prenda: {garment_seg is not None}).\n"
+            "Usa --provider pose-heuristic para visualizar regiones heurísticas basadas en DWPose, "
+            "o implementa un proveedor de la etapa 2/3 del plan comercial."
+        )
+        sys.exit(2)
 
     # Save colorized segmentations
     save_image(colorize_segmentation(person_seg), output_dir, "00_person_segmentation")
@@ -317,7 +370,8 @@ Example:
     ca_output_dir = os.path.join(output_dir, "ca_masks")
     os.makedirs(ca_output_dir, exist_ok=True)
 
-    ca_image = create_clothing_agnostic_image_debug(
+    # Solo interesan las imágenes de depuración que escribe en disco.
+    create_clothing_agnostic_image_debug(
         img_np=person_np.copy(),
         seg_pred=person_seg.copy(),
         labels_to_segment_indices=labels_to_segment_indices.copy(),
@@ -329,7 +383,7 @@ Example:
     garment_output_dir = os.path.join(output_dir, "garment_masks")
     os.makedirs(garment_output_dir, exist_ok=True)
 
-    garment_image_processed = create_garment_image_debug(
+    create_garment_image_debug(
         img_np=garment_np.copy(),
         seg_pred=garment_seg.copy(),
         labels_to_segment_indices=labels_to_segment_indices.copy(),

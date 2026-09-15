@@ -1,0 +1,59 @@
+{
+  "recorded_at": "2026-09-15",
+  "recorded_from": "fashn-human-parser",
+  "package_version": "0.1.1",
+  "why": "Tabla de interoperabilidad FASHN VTON v1.5 (ids de clase que el modelo espera). Se registra antes de retirar la dependencia NC para poder verificar por igualdad la tabla propia (src/fashn_vton/segmentation/labels.py).",
+  "LABELS_TO_IDS": {
+    "background": 0,
+    "face": 1,
+    "hair": 2,
+    "top": 3,
+    "dress": 4,
+    "skirt": 5,
+    "pants": 6,
+    "belt": 7,
+    "bag": 8,
+    "hat": 9,
+    "scarf": 10,
+    "glasses": 11,
+    "arms": 12,
+    "hands": 13,
+    "legs": 14,
+    "feet": 15,
+    "torso": 16,
+    "jewelry": 17
+  },
+  "BODY_COVERAGE_TO_LABELS": {
+    "upper": [
+      "top",
+      "dress",
+      "scarf"
+    ],
+    "lower": [
+      "skirt",
+      "pants",
+      "belt"
+    ],
+    "full": [
+      "top",
+      "dress",
+      "scarf",
+      "skirt",
+      "pants",
+      "belt"
+    ]
+  },
+  "IDENTITY_LABELS": [
+    "face",
+    "hair",
+    "jewelry",
+    "bag",
+    "glasses",
+    "hat"
+  ],
+  "CATEGORY_TO_BODY_COVERAGE": {
+    "tops": "upper",
+    "bottoms": "lower",
+    "one-pieces": "full"
+  }
+}
