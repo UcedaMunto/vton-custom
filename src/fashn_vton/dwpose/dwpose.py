@@ -120,7 +120,7 @@ class DWposeDetector:
         un_visible = subset < KEYPOINT_VISIBILITY_THRESHOLD
         candidate[un_visible] = -1
 
-        foot = candidate[:, 18:24]
+        # ``candidate[:, 18:24]`` (pies) no se usa en el diccionario devuelto.
         faces = candidate[:, 24:92]
         hands = candidate[:, 92:113]
         hands = np.vstack([hands, candidate[:, 113:]])

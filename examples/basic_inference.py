@@ -68,6 +68,15 @@ Example:
         help="Disable segmentation-free mode. Default (enabled) preserves body features and allows unconstrained garment volume",
     )
     parser.add_argument("--device", type=str, default=None, help="Device to use (cuda/cpu)")
+    parser.add_argument(
+        "--segmentation-provider",
+        type=str,
+        default="none",
+        help=(
+            "Proveedor de segmentación (default: none = camino comercial sin máscaras). "
+            "Opciones: none, pose-heuristic (experimental), sam2, grounded-sam2, custom-parser"
+        ),
+    )
     args = parser.parse_args()
 
     # Validate inputs exist
@@ -93,7 +102,15 @@ Example:
 
     # Create pipeline (loads all models internally)
     print(f"Loading pipeline from {args.weights_dir}...")
-    pipeline = TryOnPipeline(weights_dir=args.weights_dir, device=args.device)
+    from fashn_vton.segmentation import build_segmentation_provider
+
+    provider = build_segmentation_provider(args.segmentation_provider)
+    print(f"Segmentation provider: {provider.describe()}")
+    pipeline = TryOnPipeline(
+        weights_dir=args.weights_dir,
+        device=args.device,
+        segmentation_provider=provider,
+    )
 
     # Run inference
     result = pipeline(
@@ -116,6 +133,16 @@ Example:
         output_path = output_dir / f"output_{i:02d}.png"
         output_image.save(output_path)
         print(f"Saved: {output_path}")
+
+    segmentation = (result.metadata or {}).get("segmentation", {})
+    if segmentation:
+        print(
+            f"\nSegmentación: proveedor={segmentation.get('provider')} "
+            f"(persona={'sí' if segmentation.get('person_mask') else 'no'}, "
+            f"prenda={'sí' if segmentation.get('garment_mask') else 'no'})"
+        )
+        for note in segmentation.get("degraded", []):
+            print(f"  AVISO (degradado): {note}")
 
     print(f"\nDone! Generated {len(result.images)} images.")
 

@@ -4,12 +4,13 @@ import logging
 from typing import List, Optional
 
 import numpy as np
-from fashn_human_parser import BODY_COVERAGE_TO_LABELS, IDENTITY_LABELS, LABELS_TO_IDS
 
+from ..segmentation.labels import BODY_COVERAGE_TO_LABELS, IDENTITY_LABELS, LABELS_TO_IDS
 from ..utils import setup_logger
 from .masks import asymmetric_dilate_mask, create_bounded_mask, create_contour_following_mask, dilate_mask
 
-# Re-export constants from fashn_human_parser for convenience
+# Local interoperability tables (commercial fork: no dependency on
+# fashn-human-parser). Kept as aliases so existing call sites keep working.
 FASHN_LABELS_TO_IDS = LABELS_TO_IDS
 BODY_COVERAGE_TO_FASHN_LABELS = BODY_COVERAGE_TO_LABELS
 IDENTITY_FASHN_LABELS = tuple(IDENTITY_LABELS)

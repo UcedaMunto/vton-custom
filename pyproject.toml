@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fashn-vton"
-version = "1.5.0"
-description = "FASHN VTON v1.5"
+version = "1.5.0+commercial.1"
+description = "FASHN VTON v1.5 (fork comercial: sin dependencias de licencia no comercial)"
 license = {text = "Apache-2.0"}
 authors = [
     {name = "FASHN AI", email = "dan@fashn.ai"}
@@ -37,10 +37,35 @@ dependencies = [
     "einops>=0.6.0",
     "onnxruntime-gpu>=1.14.0",
     "matplotlib>=3.5.0",
-    "fashn-human-parser>=0.1.1",
+    # fashn-human-parser ELIMINADO (fork comercial): sus pesos heredan la licencia
+    # no comercial de NVIDIA SegFormer. La segmentación ahora es un proveedor
+    # enchufable (src/fashn_vton/segmentation) con 'none' como opción por defecto.
 ]
 
 [project.optional-dependencies]
+# Servicio HTTP (ver src/fashn_vton/api/main.py)
+api = [
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+    "python-multipart>=0.0.9",
+]
+# Interfaz web de pruebas (ver webui/app.py)
+webui = [
+    "gradio>=5.0",
+    "psutil>=5.9",
+]
+# Interfaz de línea de comandos de verificación de licencias (solo stdlib)
+licenses = []
+# Métricas de calidad del benchmark (src/fashn_vton/eval/quality_gates.py).
+# Sin redes preentrenadas: solo estadística sobre píxeles.
+metrics = [
+    "scikit-image>=0.20",
+    "scipy>=1.10",
+]
+# Proveedores de segmentación opcionales (etapas 2/2b del plan comercial).
+# Los checkpoints se auditan aparte; ver THIRD_PARTY_NOTICES.md.
+providers-sam2 = ["sam2>=1.1"]
+providers-grounded-sam2 = ["groundingdino"]
 dev = [
     "pytest>=7.0.0",
     "black>=23.0.0",
@@ -59,6 +84,14 @@ where = ["src"]
 [tool.black]
 line-length = 120
 target-version = ["py310", "py311", "py312"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: prueba que no requiere GPU ni pesos descargados",
+    "integration: prueba que requiere GPU y/o los pesos de weights/",
+]
+addopts = "-q"
 
 [tool.ruff]
 line-length = 120

@@ -1,5 +1,12 @@
 # FASHN VTON v1.5: Efficient Maskless Virtual Try-On in Pixel Space
 
+> **Fork comercial.** Este clon elimina la dependencia `fashn-human-parser`
+> (licencia no comercial heredada de NVIDIA SegFormer) y usa un proveedor de
+> segmentación enchufable: ver [`README_COMERCIAL.md`](README_COMERCIAL.md),
+> [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) y
+> [`plan_modelo_comercial/PLAN_IMPLEMENTACION_COMERCIAL.md`](plan_modelo_comercial/PLAN_IMPLEMENTACION_COMERCIAL.md).
+> El camino comercial soportado es `segmentation_free=True` + prendas `flat-lay`.
+
 <div align="center">
   <a href="https://fashn.ai/research/vton-1-5"><img src='https://img.shields.io/badge/Project-Page-1A1A1A?style=flat' alt='Project Page'></a>&ensp;
   <a href='https://huggingface.co/fashn-ai/fashn-vton-1.5'><img src='https://img.shields.io/badge/Hugging%20Face-Model-FFD21E?style=flat&logo=HuggingFace&logoColor=FFD21E' alt='Hugging Face Model'></a>&ensp;
@@ -134,5 +141,12 @@ Apache-2.0. See [LICENSE](LICENSE) for details.
 **Third-party components:**
 - [DWPose](https://github.com/IDEA-Research/DWPose) (Apache-2.0)
 - [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX) (Apache-2.0)
-- [fashn-human-parser](https://github.com/fashn-AI/fashn-human-parser) ([License](https://github.com/fashn-AI/fashn-human-parser?tab=readme-ov-file#license))
+
+> **Nota del fork comercial:** `fashn-human-parser` ya **no** es una dependencia
+> de este repositorio (sus pesos heredan la licencia no comercial de NVIDIA
+> SegFormer). La segmentación se resuelve con proveedores enchufables
+> (`src/fashn_vton/segmentation/`); el inventario vigente de terceros está en
+> [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) y
+> [`licenses/manifest.json`](licenses/manifest.json); la especificación completa
+> del cambio, en [`CAMBIO_MODULO_COMERCIAL.md`](CAMBIO_MODULO_COMERCIAL.md).
 
