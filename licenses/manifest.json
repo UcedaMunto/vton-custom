@@ -1,0 +1,250 @@
+{
+  "_comment": "Inventario de terceros del fork comercial de FASHN VTON v1.5 (machine-readable). sha256 calculado localmente sobre los archivos reales. Rutas relativas a la raiz del repo (o al --root indicado).",
+  "project": "fashn-vton (fork comercial, sin dependencias de licencia no comercial)",
+  "updated_at": "2026-09-15",
+  "artifacts": [
+    {
+      "name": "fashn-ai/fashn-vton-1.5 model.safetensors (TryOnModel)",
+      "source": "https://huggingface.co/fashn-ai/fashn-vton-1.5",
+      "license": "Apache-2.0",
+      "license_file": "licenses/Apache-2.0.txt",
+      "sha256": "d6cd38286885bc29fa487ea9383f80ffeb95862e7747c630d42c5d3c05bdd35a",
+      "bytes": 1943668048,
+      "local_path": "weights/model.safetensors",
+      "used_in": ["pipeline (TryOnModel)"],
+      "notes": "VERIFICADO 2026-09-15 con sha256 local (repo publico, sin HF_TOKEN). Modelo principal; el fork no modifica sus pesos."
+    },
+    {
+      "name": "fashn-ai/DWPose yolox_l.onnx (detector)",
+      "source": "https://huggingface.co/fashn-ai/DWPose",
+      "license": "Apache-2.0",
+      "license_file": "licenses/Apache-2.0.txt",
+      "sha256": "7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411",
+      "bytes": 216746733,
+      "local_path": "weights/dwpose/yolox_l.onnx",
+      "used_in": ["pipeline (DWPose)"],
+      "notes": "VERIFICADO 2026-09-15. DWPose y YOLOX se declaran Apache-2.0 en el repo de FASHN."
+    },
+    {
+      "name": "fashn-ai/DWPose dw-ll_ucoco_384.onnx (keypoints)",
+      "source": "https://huggingface.co/fashn-ai/DWPose",
+      "license": "Apache-2.0",
+      "license_file": "licenses/Apache-2.0.txt",
+      "sha256": "724f4ff2439ed61afb86fb8a1951ec39c6220682803b4a8bd4f598cd913b1843",
+      "bytes": 134399116,
+      "local_path": "weights/dwpose/dw-ll_ucoco_384.onnx",
+      "used_in": ["pipeline (DWPose)", "provider pose-heuristic"],
+      "notes": "VERIFICADO 2026-09-15. Estima los 18 keypoints COCO-18."
+    },
+    {
+      "name": "PyTorch",
+      "source": "https://pypi.org/project/torch/",
+      "license": "BSD-3-Clause",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["pipeline"],
+      "notes": "Libreria. Auditar version y build CUDA al publicar."
+    },
+    {
+      "name": "torchvision",
+      "source": "https://pypi.org/project/torchvision/",
+      "license": "BSD-3-Clause",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["pipeline"],
+      "notes": "Libreria."
+    },
+    {
+      "name": "safetensors",
+      "source": "https://pypi.org/project/safetensors/",
+      "license": "Apache-2.0",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["pipeline"],
+      "notes": "Libreria."
+    },
+    {
+      "name": "huggingface_hub",
+      "source": "https://pypi.org/project/huggingface-hub/",
+      "license": "Apache-2.0",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["pipeline", "scripts/download_weights.py"],
+      "notes": "Libreria."
+    },
+    {
+      "name": "Pillow",
+      "source": "https://pypi.org/project/pillow/",
+      "license": "MIT-CMU (HPND)",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["pipeline"],
+      "notes": "Libreria."
+    },
+    {
+      "name": "NumPy",
+      "source": "https://pypi.org/project/numpy/",
+      "license": "BSD-3-Clause",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["pipeline"],
+      "notes": "Libreria."
+    },
+    {
+      "name": "opencv-python",
+      "source": "https://pypi.org/project/opencv-python/",
+      "license": "Apache-2.0 (OpenCV) / MIT (wrapper)",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["pipeline", "preprocessing"],
+      "notes": "Libreria."
+    },
+    {
+      "name": "tqdm",
+      "source": "https://pypi.org/project/tqdm/",
+      "license": "MPL-2.0 / MIT (dual)",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["pipeline"],
+      "notes": "Libreria."
+    },
+    {
+      "name": "einops",
+      "source": "https://pypi.org/project/einops/",
+      "license": "MIT",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["tryon_mmdit"],
+      "notes": "Libreria."
+    },
+    {
+      "name": "onnxruntime-gpu",
+      "source": "https://pypi.org/project/onnxruntime-gpu/",
+      "license": "MIT",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["dwpose (ONNX)"],
+      "notes": "Libreria. La variante CPU es suficiente; la GPU solo aporta rendimiento."
+    },
+    {
+      "name": "matplotlib",
+      "source": "https://pypi.org/project/matplotlib/",
+      "license": "PSF-based (BSD-compatible)",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["utilidades"],
+      "notes": "Libreria."
+    },
+    {
+      "name": "FastAPI / Starlette / Uvicorn / python-multipart",
+      "source": "https://pypi.org/project/fastapi/",
+      "license": "MIT / BSD-3-Clause / BSD-3-Clause / Apache-2.0",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["api (extra 'api')"],
+      "notes": "Servicio HTTP del fork."
+    },
+    {
+      "name": "Gradio",
+      "source": "https://pypi.org/project/gradio/",
+      "license": "Apache-2.0",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["webui (extra 'webui')"],
+      "notes": "Interfaz web de pruebas."
+    },
+    {
+      "name": "psutil",
+      "source": "https://pypi.org/project/psutil/",
+      "license": "BSD-3-Clause",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["webui", "api"],
+      "notes": "Diagnostico de memoria."
+    },
+    {
+      "name": "facebook/sam2.1-hiera-tiny (SAM 2, etapa 2)",
+      "source": "https://huggingface.co/facebook/sam2.1-hiera-tiny",
+      "license": "Apache-2.0",
+      "license_file": "licenses/Apache-2.0.txt",
+      "sha256": "7402e0d864fa82708a20fbd15bc84245c2f26dff0eb43a4b5b93452deb34be69",
+      "bytes": 156008466,
+      "local_path": "weights/sam2/sam2.1_hiera_tiny.pt",
+      "used_in": ["provider sam2 (opcional)"],
+      "notes": "VERIFICADO 2026-09-15: descargado de HuggingFace (repo publico) y sha256 calculado localmente; la model card declara apache-2.0. Solo se carga si se selecciona el proveedor 'sam2'."
+    },
+    {
+      "name": "sam2 (paquete Python)",
+      "source": "https://pypi.org/project/sam2/",
+      "license": "Apache-2.0",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["provider sam2"],
+      "notes": "Instalado con pip install sam2==1.1.0 (arrastra hydra-core, omegaconf, iopath, portalocker; todos permisivos)."
+    },
+    {
+      "name": "SAM 2 (opcional, etapa 2)",
+      "source": "https://github.com/facebookresearch/sam2",
+      "license": "Apache-2.0 (codigo y checkpoints)",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["provider sam2"],
+      "notes": "IMPLEMENTADO 2026-09-15 (antes era esqueleto). Ver la fila del checkpoint concreto arriba."
+    },
+    {
+      "name": "IDEA-Research/grounding-dino-tiny (etapa 2b)",
+      "source": "https://huggingface.co/IDEA-Research/grounding-dino-tiny",
+      "license": "Apache-2.0",
+      "license_file": "licenses/Apache-2.0.txt",
+      "sha256": "1a2412ef99bd74bcd3c2a246fa1e48581f8889a1300c9051974741314fc042f3",
+      "bytes": 689359096,
+      "local_path": "weights/grounding_dino/model.safetensors",
+      "used_in": ["provider grounded-sam2 (opcional)"],
+      "notes": "VERIFICADO 2026-09-15: descargado de HuggingFace (repo publico) y sha256 calculado localmente; la model card declara apache-2.0. Se carga con transformers (AutoModelForZeroShotObjectDetection, local_files_only)."
+    },
+    {
+      "name": "Grounding DINO (opcional, etapa 2b)",
+      "source": "https://github.com/IDEA-Research/GroundingDINO",
+      "license": "Apache-2.0",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["provider grounded-sam2"],
+      "notes": "IMPLEMENTADO 2026-09-15 mediante transformers (sin compilar el paquete oficial groundingdino). Ver la fila del checkpoint concreto arriba."
+    },
+    {
+      "name": "Detectron2 (opcional, etapa 3)",
+      "source": "https://github.com/facebookresearch/detectron2",
+      "license": "Apache-2.0",
+      "sha256": null,
+      "local_path": null,
+      "used_in": ["provider custom-parser (NO IMPLEMENTADO)"],
+      "notes": "Base prevista para el parser propio; los pesos seran propios."
+    }
+  ],
+  "forbidden_artifacts": [
+    {
+      "name": "fashn-human-parser (paquete o pesos)",
+      "license": "Licencia heredada de NVIDIA SegFormer (uso no comercial)",
+      "reason": "Motivo del fork: sus pesos derivan de SegFormer, que limita el uso a investigacion/evaluacion. Sustituido por src/fashn_vton/segmentation (proveedor 'none' por defecto).",
+      "match": ["**/fashn_human_parser/**", "**/fashn-human-parser/**", "**/*fashn*human*parser*"]
+    },
+    {
+      "name": "SegFormer / nvidia/segformer-*",
+      "license": "NVIDIA Source Code License (no comercial)",
+      "reason": "Toda la familia SegFormer hereda la licencia NC de NVIDIA.",
+      "match": ["**/*segformer*", "**/*SegFormer*"]
+    },
+    {
+      "name": "VITON-HD / DressCode (datasets)",
+      "license": "CC BY-NC 4.0 / prohibido a empresas privadas",
+      "reason": "No pueden usarse para entrenar ni evaluar el producto comercial.",
+      "match": ["**/dataset/DATA_DIR*/**", "**/DressCode/**"]
+    },
+    {
+      "name": "Pesos NC cacheados por HuggingFace",
+      "license": "NC (heredada)",
+      "reason": "El parser cacheaba sus pesos en ~/.cache/huggingface/models--fashn-ai--fashn-human-parser; purgar antes de construir imagenes de produccion.",
+      "match": ["**/models--fashn-ai--fashn-human-parser/**", "**/models--*segformer*/**"]
+    }
+  ]
+}
