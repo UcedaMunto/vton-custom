@@ -42,6 +42,9 @@ libre. Alternativa directa, sin `run_web.sh`:
    y el uso de VRAM/RAM; al terminar, la galería con el resultado y el log.
 4. Los PNG se guardan en `outputs/webui/<fecha>_s<semilla>_<i>.png` junto a un
    `..._params.txt` con el log de la petición.
+5. El **resultado final aparece también arriba a la derecha**; el botón «**Ver en
+   grande (modal)**» lo abre a pantalla completa (o usa el icono de pantalla
+   completa de la propia imagen).
 
 ## Parámetros y coste (medido en esta máquina, RTX 3060)
 
@@ -64,6 +67,60 @@ fallan con un mensaje accionable si se seleccionan. Con un proveedor que no
 aporta máscaras (`none`) y `flat-lay` + `segmentation_free`, la generación es
 idéntica al pipeline original de FASHN (verificado por sha256) y sin ninguna
 dependencia de licencia no comercial.
+
+## Tela propia: color, textura, tamaño y ángulo
+
+Acordeón «**Tela propia: color, textura y ángulo (opcional)**». Sustituye el color
+y el estampado de la prenda con la foto de una tela **antes** de generar el try-on
+(es una transformación de *entrada*: el modelo y el camino comercial no se tocan).
+
+1. Sube la **tela** (una foto del estampado; cuanto más plana y repetible, mejor)
+   o elige un **color plano** si solo quieres cambiar el color.
+2. Pulsa «**Previsualizar prenda con la tela**» para ver el resultado y ajustar.
+3. Activa «**Aplicar tela a la prenda**» y genera. Con el acordeón inactivo el
+   resultado es exactamente el de antes (mismo `sha256`).
+
+Se **asume que la prenda está sobre fondo blanco o gris** (foto de producto): el
+sistema mide la mediana del borde y separa la prenda por distancia de color
+(«Máscara de la prenda = auto», con la «Tolerancia de fondo» ajustable). Si el
+fondo no es uniforme, la UI avisa en el log y conviene subir la tolerancia o usar
+«tela-completa». Como referencia, el modo `flat-lay` es el que mejor encaja.
+
+| Grupo | Control | Qué hace |
+|---|---|---|
+| Tamaño | **Cómo se mide el motivo**: `centímetros reales` / `píxeles de la imagen` / `relativo (escala)` | Elige la unidad; el patrón **se repite** siempre (mosaico infinito) |
+| Tamaño | **Tamaño del motivo (cm)** + **Ancho real de la prenda (cm)** | Calibración real: 50 cm de prenda con motivo de 12 cm ⇒ **~4,2 repeticiones** |
+| Tamaño | **Tamaño del motivo (px)** | Para técnicos: ancho del motivo en píxeles de la imagen de la prenda |
+| Tamaño | **Escala relativa** | `1.0` = la tela cubre el ancho de la prenda |
+| Ángulo | **Ángulo del estampado (°)** | Gira el mosaico (para que las rayas sigan la dirección deseada) |
+| Ángulo | **Enderezar la foto de la tela (°)** | Corrige una foto de tela torcida antes de aplicarla |
+| Ángulo | **Inclinación X/Y (sesgo)** y **Profundidad Z (perspectiva)** | Simula el plano de la prenda: la tela «cae» con el volumen de la superficie |
+| Encaje | **Desplazamiento X/Y** y **Mosaico** (`repetir` / `espejo`) | Mueve el patrón y elige si el mosaico refleja (sin costuras visibles) o repite |
+| Resultado | **Fuerza de la tela**, **Conservar sombras**, **Conservar detalles (costuras)**, **Brillo de la tela** | Mezcla con la prenda original, mantiene pliegues y volumen, o reintroduce costuras/botones |
+| Resultado | **Solo panel frontal (banda central)** | `1.0` = toda la prenda; menos, una banda central (aproximación geométrica del frente) |
+| Fondo | **Fondo del resultado**: `original` / `blanco` / `gris` / `color` (+ selector) | Recompone el fondo de la prenda sintética |
+| Ayuda | **Cuadrícula de 10 cm (solo previsualización)** | Dibuja una cuadrícula de referencia **solo en la previsualización**; la imagen que entra al try-on nunca la lleva |
+
+Bajo el acordeón hay una línea viva que informa del tamaño calculado, por ejemplo:
+
+```
+Motivo: 138 px de ancho (~12,0 cm sobre 50 cm de prenda) · repeticiones a lo ancho: 4.17
+```
+
+Implementación: `src/fashn_vton/preprocessing/fabric.py` (solo numpy/OpenCV/PIL,
+**sin nuevos pesos ni licencias**; 17 pruebas en `tests/test_fabric_transfer.py`).
+Los parámetros se pueden usar también desde Python o la API:
+
+```python
+from fashn_vton.preprocessing.fabric import FabricTransferConfig, retexture_garment
+
+config = FabricTransferConfig(
+    enabled=True, repeat_mode="cm", repeat_cm=12, garment_width_cm=50,
+    rotation=45, tilt_y=0.15, strength=1.0, shading=1.0, background="blanco",
+)
+imagen_con_tela, mascara, info = retexture_garment(prenda_rgb, tela_rgb, config)
+print(info.describe(), "|", info.describe_repeat())
+```
 
 ## Variables de entorno
 
@@ -130,7 +187,7 @@ HTTP (útil para scripts o pruebas automatizadas):
 from gradio_client import Client, handle_file
 
 client = Client("http://127.0.0.1:7863/")
-galeria, log = client.predict(
+galeria, log, preview = client.predict(
     handle_file("examples/data/model.webp"),   # persona
     handle_file("examples/data/garment.webp"), # prenda
     "tops",      # categoría
@@ -142,10 +199,40 @@ galeria, log = client.predict(
     True,        # segmentation_free
     "none",      # proveedor de segmentación
     "auto",      # device
+    # --- tela propia (opcional; 21 parámetros, ver el acordeón) ---
+    handle_file("tela.png"),  # imagen de la tela (None = no usar)
+    True,        # fabric_enabled
+    "#ffffff",   # color plano
+    "blanco",    # fondo del resultado: original|blanco|gris|color
+    "#ffffff",   # color de fondo
+    "auto",      # máscara: auto|tela-completa
+    30.0,        # tolerancia de fondo
+    1.0,         # solo panel frontal (1.0 = toda la prenda)
+    1.0,         # escala relativa
+    0.0,         # ángulo del estampado
+    0.0,         # inclinación X
+    0.0,         # inclinación Y
+    0.0,         # desplazamiento X
+    0.0,         # desplazamiento Y
+    0.0,         # profundidad Z
+    0.0,         # enderezar la foto de la tela
+    1.0,         # brillo
+    1.0,         # fuerza
+    1.0,         # conservar sombras
+    0.0,         # conservar detalles
+    "repetir",   # mosaico: repetir|espejo
+    "cm",        # medida del motivo: cm|px|scale
+    12.0,        # tamaño del motivo (cm)
+    50.0,        # ancho real de la prenda (cm)
+    120.0,       # tamaño del motivo (px)
     api_name="/tryon",
 )
-print(galeria, log)
+print(galeria, log, preview)
 ```
+
+El endpoint devuelve **tres salidas**: la galería, el log y la **previsualización
+del resultado final** (la misma que se ve arriba a la derecha en la interfaz).
+Leer las salidas por posición (no desempaquetando) evita romperse si se añaden más.
 
 ### Script de humo (recomendado)
 
@@ -167,6 +254,15 @@ re-codificada a WebP en `/tmp/gradio/...`, cuyo hash no es comparable).
 ## Notas de implementación (Gradio 6)
 
 - `gr.Gallery` ya **no** acepta `show_download_button` (se usa `preview=True`).
+- El **modal** no existe como componente en Gradio 6.27: se implementa con un
+  `gr.Column` en posición fija y `visible=False` (CSS `.vton-modal` en `MODAL_CSS`)
+  que un botón muestra/oculta; así el visor grande no depende de componentes
+  internos ni de librerías nuevas.
+- Las imágenes usan `buttons=["download", "fullscreen"]`: el icono de pantalla
+  completa es el visor rápido y «Ver en grande (modal)» es el overlay propio.
+- Cada salida nueva del evento `/tryon` (hoy: galería, log y **previsualización**)
+  obliga a actualizar los clientes; leer las salidas por posición, no
+  desempaquetando.
 - `theme` se pasa a `launch()`, **no** al constructor de `Blocks()` (da aviso de
   deprecación en Gradio 6).
 - El progreso real por paso se obtiene envolviendo `tqdm` dentro de

@@ -49,6 +49,19 @@ DEVICE_CHOICES = ["auto", "cuda", "cpu"]
 
 GPU_LOCK_CONSUMER = "fashn_webui"
 
+#: CSS del visor grande: un overlay a pantalla completa que se muestra/oculta con
+#: `visible` (Gradio 6.27 no trae componente Modal propio).
+MODAL_CSS = """
+.vton-modal {
+    position: fixed; inset: 0; z-index: 3000;
+    background: rgba(8, 8, 10, 0.93);
+    padding: 1.5rem; overflow: auto;
+    border: none;
+}
+.vton-modal .vton-image { max-height: 72vh; }
+.preview-hint p { font-size: 0.72rem; opacity: 0.65; margin: 0.15rem 0 0 0; }
+"""
+
 logger = logging.getLogger("fashn_webui")
 
 
@@ -226,6 +239,206 @@ def _gpu_lock(action: str) -> tuple[bool, str]:
         return False, f"{type(exc).__name__}: {exc}"
 
 
+def _rgb(value, default: tuple[int, int, int] = (255, 255, 255)) -> tuple[int, int, int]:
+    """Color de Gradio (``#rrggbb``, ``rgb(...)`` o tupla) → ``(r, g, b)`` entero."""
+    if value is None:
+        return default
+    if isinstance(value, (tuple, list)) and len(value) >= 3:
+        return tuple(int(channel) for channel in value[:3])
+    text = str(value).strip().lstrip("#")
+    if text.lower().startswith("rgb"):
+        digits = [part for part in text[text.find("(") + 1 : text.find(")")].split(",") if part.strip()]
+        if len(digits) >= 3:
+            return tuple(max(0, min(255, int(float(part)))) for part in digits[:3])
+    if len(text) == 6:
+        return tuple(int(text[index : index + 2], 16) for index in (0, 2, 4))
+    if len(text) == 3:
+        return tuple(int(digit * 2, 16) for digit in text)
+    return default
+
+
+def build_fabric_config(
+    enabled,
+    fabric_color,
+    background,
+    background_color,
+    mask_source,
+    tolerance,
+    front_only,
+    scale,
+    rotation,
+    tilt_x,
+    tilt_y,
+    offset_x,
+    offset_y,
+    perspective,
+    fabric_angle,
+    brightness,
+    strength,
+    shading,
+    detail,
+    mosaic,
+    repeat_mode="cm",
+    repeat_cm=12.0,
+    garment_width_cm=50.0,
+    repeat_px=120.0,
+):
+    """Traduce los controles de la UI a :class:`FabricTransferConfig`."""
+    from fashn_vton.preprocessing.fabric import FabricTransferConfig
+
+    return FabricTransferConfig(
+        enabled=bool(enabled),
+        repeat_mode=str(repeat_mode),
+        repeat_cm=float(repeat_cm),
+        garment_width_cm=float(garment_width_cm),
+        repeat_px=float(repeat_px),
+        scale=float(scale),
+        rotation=float(rotation),
+        tilt_x=float(tilt_x),
+        tilt_y=float(tilt_y),
+        offset_x=float(offset_x),
+        offset_y=float(offset_y),
+        perspective=float(perspective),
+        fabric_angle=float(fabric_angle),
+        brightness=float(brightness),
+        strength=float(strength),
+        shading=float(shading),
+        detail=float(detail),
+        background_tolerance=float(tolerance),
+        front_only=float(front_only),
+        background=str(background),
+        background_color=_rgb(background_color),
+        mosaic=str(mosaic),
+        mask_source=str(mask_source),
+        flat_color=_rgb(fabric_color),
+    )
+
+
+def _draw_scale_grid(image, garment_width_cm: float, step_cm: float = 10.0):
+    """Cuadrícula de referencia (cada ``step_cm`` cm) para juzgar el tamaño real.
+
+    Solo se usa en la **previsualización**: la imagen que entra al try-on nunca
+    lleva la cuadrícula.
+    """
+    from PIL import ImageDraw
+
+    if garment_width_cm <= 0:
+        return image
+    width, height = image.size
+    step = max(6, int(round(width / float(garment_width_cm) * step_cm)))
+    canvas = image.copy()
+    draw = ImageDraw.Draw(canvas, "RGBA")
+    for x in range(0, width, step):
+        draw.line([(x, 0), (x, height)], fill=(0, 0, 0, 80), width=1)
+    for y in range(0, height, step):
+        draw.line([(0, y), (width, y)], fill=(0, 0, 0, 80), width=1)
+    return canvas
+
+
+def apply_fabric_to_garment(garment, fabric_image, config, show_grid: bool = False) -> tuple[object, str]:
+    """Aplica la tela a la prenda; devuelve ``(imagen nueva, log)``.
+
+    Es una transformación de **entrada**: la imagen resultante es la que entra al
+    pipeline. No toca el modelo ni el camino comercial (`enabled=False` ⇒ intacto).
+    """
+    import numpy as np
+    from PIL import Image
+
+    from fashn_vton.preprocessing.fabric import retexture_garment
+
+    fabric_array = None
+    if fabric_image is not None:
+        if hasattr(fabric_image, "convert"):
+            fabric_array = np.asarray(fabric_image.convert("RGB"))
+        else:
+            fabric_array = np.asarray(fabric_image)[..., :3]
+
+    result, _mask, info = retexture_garment(np.asarray(garment.convert("RGB")), fabric_array, config)
+    image = Image.fromarray(result)
+    lines = [info.describe(), info.describe_repeat()]
+    if info.background_uniformity is not None:
+        lines.append(f"  fondo: uniformidad={info.background_uniformity} (bajo = liso)")
+    for note in info.notes:
+        lines.append(f"  aviso: {note}")
+    if show_grid and info.applied:
+        image = _draw_scale_grid(image, config.garment_width_cm, step_cm=10.0)
+        lines.append("  cuadrícula de 10 cm solo en la previsualización (no va al try-on)")
+    return image, "\n".join(lines)
+
+
+def preview_fabric(
+    garment_image,
+    fabric_image,
+    fabric_enabled,
+    fabric_color,
+    fabric_bg_mode,
+    fabric_bg_color,
+    fabric_mask_source,
+    fabric_tolerance,
+    fabric_front_only,
+    fabric_scale,
+    fabric_rotation,
+    fabric_tilt_x,
+    fabric_tilt_y,
+    fabric_offset_x,
+    fabric_offset_y,
+    fabric_perspective,
+    fabric_angle,
+    fabric_brightness,
+    fabric_strength,
+    fabric_shading,
+    fabric_detail,
+    fabric_mosaic,
+    fabric_repeat_mode="cm",
+    fabric_repeat_cm=12.0,
+    fabric_garment_width_cm=50.0,
+    fabric_repeat_px=120.0,
+    fabric_show_grid=False,
+):
+    """Botón «Previsualizar prenda»: aplica la tela sin lanzar el try-on."""
+    import gradio as gr
+
+    if garment_image is None:
+        raise gr.Error("Sube una imagen de prenda para previsualizar la tela.")
+
+    config = build_fabric_config(
+        fabric_enabled,
+        fabric_color,
+        fabric_bg_mode,
+        fabric_bg_color,
+        fabric_mask_source,
+        fabric_tolerance,
+        fabric_front_only,
+        fabric_scale,
+        fabric_rotation,
+        fabric_tilt_x,
+        fabric_tilt_y,
+        fabric_offset_x,
+        fabric_offset_y,
+        fabric_perspective,
+        fabric_angle,
+        fabric_brightness,
+        fabric_strength,
+        fabric_shading,
+        fabric_detail,
+        fabric_mosaic,
+        fabric_repeat_mode,
+        fabric_repeat_cm,
+        fabric_garment_width_cm,
+        fabric_repeat_px,
+    )
+    if not config.enabled:
+        return garment_image, "Tela desactivada: activa «Aplicar tela a la prenda» para ver el resultado."
+
+    try:
+        result, log_text = apply_fabric_to_garment(
+            garment_image, fabric_image, config, show_grid=bool(fabric_show_grid)
+        )
+    except Exception as exc:  # noqa: BLE001 - se muestra en la UI
+        raise gr.Error(f"No se pudo aplicar la tela: {type(exc).__name__}: {exc}") from exc
+    return result, log_text
+
+
 def _save_images(images, seed: int, params_log: str) -> list[Path]:
     """Guarda cada muestra como PNG en `outputs/webui/` (gitignored)."""
     directory = output_dir()
@@ -267,6 +480,32 @@ def generate(
     segmentation_free: bool,
     provider_name: str,
     device_choice: str,
+    # --- tela propia (opcional; por defecto desactivada) ---
+    fabric_image=None,
+    fabric_enabled: bool = False,
+    fabric_color="#ffffff",
+    fabric_bg_mode: str = "original",
+    fabric_bg_color="#ffffff",
+    fabric_mask_source: str = "auto",
+    fabric_tolerance: float = 30.0,
+    fabric_front_only: float = 1.0,
+    fabric_scale: float = 1.0,
+    fabric_rotation: float = 0.0,
+    fabric_tilt_x: float = 0.0,
+    fabric_tilt_y: float = 0.0,
+    fabric_offset_x: float = 0.0,
+    fabric_offset_y: float = 0.0,
+    fabric_perspective: float = 0.0,
+    fabric_angle: float = 0.0,
+    fabric_brightness: float = 1.0,
+    fabric_strength: float = 1.0,
+    fabric_shading: float = 1.0,
+    fabric_detail: float = 0.0,
+    fabric_mosaic: str = "repetir",
+    fabric_repeat_mode: str = "cm",
+    fabric_repeat_cm: float = 12.0,
+    fabric_garment_width_cm: float = 50.0,
+    fabric_repeat_px: float = 120.0,
 ):
     """Manejador del botón «Generar try-on» (generador de Gradio).
 
@@ -307,18 +546,18 @@ def generate(
         f"pasos={num_timesteps} · guidance={guidance_scale} · seed={seed} · "
         f"segmentation_free={segmentation_free} · proveedor={provider_name} · device={device_choice}"
     )
-    yield None, status()
+    yield None, status(), None
 
     # Turno único de GPU (opcional, ver docstring del módulo).
     use_lock = _env_flag("FASHN_USE_GPU_LOCK", False)
     acquired = False
     if use_lock:
         log("Solicitando turno de GPU (infra.gpu_lock)…")
-        yield None, status()
+        yield None, status(), None
         acquired, message = _gpu_lock("acquire")
         if not acquired:
             log(f"GPU ocupada: {message}")
-            yield None, status()
+            yield None, status(), None
             raise gr.Error(
                 "La GPU está en uso por otro consumidor (Pista A o IDM-CUSTOM). "
                 "Espera a que termine o desactiva FASHN_USE_GPU_LOCK. "
@@ -331,10 +570,50 @@ def generate(
             pipeline = get_pipeline(device_choice, provider_name, log=log)
         except Exception as exc:  # noqa: BLE001 - se muestra en la UI
             log(f"ERROR al cargar los modelos: {type(exc).__name__}: {exc}")
-            yield None, status()
+            yield None, status(), None
             raise gr.Error(f"No se pudieron cargar los modelos: {exc}") from exc
 
-        yield None, status()
+        yield None, status(), None
+
+        # Tela propia (opcional): se aplica a la prenda ANTES de la inferencia.
+        fabric_config = build_fabric_config(
+            fabric_enabled,
+            fabric_color,
+            fabric_bg_mode,
+            fabric_bg_color,
+            fabric_mask_source,
+            fabric_tolerance,
+            fabric_front_only,
+            fabric_scale,
+            fabric_rotation,
+            fabric_tilt_x,
+            fabric_tilt_y,
+            fabric_offset_x,
+            fabric_offset_y,
+            fabric_perspective,
+            fabric_angle,
+            fabric_brightness,
+            fabric_strength,
+            fabric_shading,
+            fabric_detail,
+            fabric_mosaic,
+            fabric_repeat_mode,
+            fabric_repeat_cm,
+            fabric_garment_width_cm,
+            fabric_repeat_px,
+        )
+        if fabric_config.enabled:
+            try:
+                garment_image, fabric_log = apply_fabric_to_garment(garment_image, fabric_image, fabric_config)
+            except Exception as exc:  # noqa: BLE001 - se muestra en la UI
+                log(f"ERROR al aplicar la tela: {type(exc).__name__}: {exc}")
+                yield None, status(), None
+                raise gr.Error(f"No se pudo aplicar la tela: {exc}") from exc
+            for line in fabric_log.splitlines():
+                log(line)
+            if photo_type != "flat-lay":
+                log("Nota: con la tela aplicada conviene «Tipo de foto de prenda = flat-lay» (el fondo se recompone).")
+            yield None, status(), None
 
         counter: dict = {"step": 0, "total": num_timesteps}
         kwargs = dict(
@@ -360,12 +639,12 @@ def generate(
                 if report != last_report:
                     last_report = report
                     log_progress(report)
-                    yield None, status()
+                    yield None, status(), None
             error = future.exception()
 
         if error is not None:
             log(f"ERROR durante la generación: {type(error).__name__}: {error}")
-            yield None, status()
+            yield None, status(), None
             raise gr.Error(f"{type(error).__name__}: {error}")
 
         result, inference_time = future.result()
@@ -394,7 +673,7 @@ def generate(
         for path in paths:
             log(f"Guardado: {path}")
 
-        yield images, status()
+        yield images, status(), images[0] if images else None
     finally:
         if acquired:
             ok, message = _gpu_lock("release")
@@ -425,7 +704,7 @@ def build_app():
         for name, info in sorted(providers.items())
     )
 
-    with gr.Blocks(title="FASHN VTON v1.5 — pruebas locales") as demo:
+    with gr.Blocks(title="FASHN VTON v1.5 — pruebas locales", css=MODAL_CSS) as demo:
         gr.Markdown(
             "# FASHN VTON v1.5 — interfaz de pruebas\n"
             "Sube una **foto de persona** y una **prenda**, elige la categoría y genera.\n"
@@ -448,6 +727,16 @@ def build_app():
                 height=380,
                 value=str(example_garment) if example_garment else None,
             )
+            with gr.Column(scale=2, min_width=200):
+                result_preview = gr.Image(
+                    label="Resultado final",
+                    type="pil",
+                    height=380,
+                    interactive=False,
+                    buttons=["download", "fullscreen"],
+                )
+                show_result_modal = gr.Button("Ver en grande (modal)", size="sm")
+                gr.Markdown(f"Se guarda en `{output_dir()}`", elem_classes=["preview-hint"])
 
         with gr.Row():
             load_examples = gr.Button("Cargar ejemplos del repo", variant="secondary")
@@ -491,8 +780,142 @@ def build_app():
                 )
             gr.Markdown(provider_notes)
 
+        from fashn_vton.preprocessing.fabric import BACKGROUND_MODES, MOSAIC_MODES
+
+        with gr.Accordion("Tela propia: color, textura y ángulo (opcional)", open=False):
+            gr.Markdown(
+                "Sustituye el **color y el estampado** de la prenda con la foto de una tela. "
+                "Se asume que la prenda está sobre fondo **blanco o gris** (foto de producto) y el fondo "
+                "del resultado es configurable. Al activarlo, usa «Tipo de foto de prenda = **flat-lay**». "
+                "Con la tela desactivada el resultado es exactamente el de antes (mismo sha256)."
+            )
+            with gr.Row():
+                fabric_enabled = gr.Checkbox(
+                    value=False,
+                    label="Aplicar tela a la prenda",
+                    info="Desactivado = comportamiento actual, sin cambios",
+                )
+                fabric_image = gr.Image(
+                    label="Tela (foto del estampado)",
+                    type="pil",
+                    sources=["upload", "clipboard"],
+                    height=200,
+                )
+                fabric_color = gr.ColorPicker(
+                    value="#ffffff",
+                    label="Color plano (si no subes tela)",
+                    info="Sustituye solo el color, sin textura",
+                )
+            with gr.Row():
+                fabric_preview_btn = gr.Button("Previsualizar prenda con la tela", variant="secondary")
+                fabric_preview = gr.Image(
+                    label="Prenda con la tela aplicada (previsualización)",
+                    type="pil",
+                    height=260,
+                    interactive=False,
+                )
+                fabric_preview_log = gr.Textbox(label="Log de la tela", lines=3, max_lines=6, autoscroll=True)
+            with gr.Row():
+                fabric_repeat_mode = gr.Radio(
+                    [
+                        ("centímetros reales", "cm"),
+                        ("píxeles de la imagen", "px"),
+                        ("relativo (escala)", "scale"),
+                    ],
+                    value="cm",
+                    label="Cómo se mide el motivo",
+                    info="cm = medida real de la tela · px = píxeles de la prenda subida",
+                )
+                fabric_repeat_cm = gr.Slider(
+                    2,
+                    60,
+                    value=12,
+                    step=0.5,
+                    label="Tamaño del motivo (cm)",
+                    info="Cuánto mide una repetición del estampado en la realidad",
+                )
+                fabric_garment_width_cm = gr.Slider(
+                    20,
+                    120,
+                    value=50,
+                    step=1,
+                    label="Ancho real de la prenda (cm)",
+                    info="Sirve para calibrar: 50 cm de prenda con motivo de 12 cm ⇒ ~4 repeticiones",
+                )
+            with gr.Row():
+                fabric_repeat_px = gr.Slider(
+                    20,
+                    400,
+                    value=120,
+                    step=5,
+                    label="Tamaño del motivo (px)",
+                    info="Solo en modo «píxeles»",
+                )
+                fabric_scale = gr.Slider(
+                    0.2,
+                    4.0,
+                    value=1.0,
+                    step=0.05,
+                    label="Escala relativa",
+                    info="Solo en modo «relativo»",
+                )
+                fabric_rotation = gr.Slider(-180, 180, value=0, step=1, label="Ángulo del estampado (°)")
+                fabric_angle = gr.Slider(-180, 180, value=0, step=1, label="Enderezar la foto de la tela (°)")
+                fabric_show_grid = gr.Checkbox(
+                    value=False,
+                    label="Cuadrícula de 10 cm (solo previsualización)",
+                    info="Se dibuja únicamente en la previsualización: la imagen que va al try-on nunca la lleva",
+                )
+            fabric_repeat_info = gr.Markdown("*Motivo y repeticiones se calculan con el ancho de la prenda que subas.*")
+            with gr.Row():
+                fabric_tilt_x = gr.Slider(-1.0, 1.0, value=0.0, step=0.05, label="Inclinación X (sesgo)")
+                fabric_tilt_y = gr.Slider(-1.0, 1.0, value=0.0, step=0.05, label="Inclinación Y (sesgo)")
+                fabric_perspective = gr.Slider(0.0, 0.8, value=0.0, step=0.05, label="Profundidad Z (perspectiva)")
+            with gr.Row():
+                fabric_offset_x = gr.Slider(-0.5, 0.5, value=0.0, step=0.01, label="Desplazamiento X")
+                fabric_offset_y = gr.Slider(-0.5, 0.5, value=0.0, step=0.01, label="Desplazamiento Y")
+                fabric_mosaic = gr.Radio(list(MOSAIC_MODES), value="repetir", label="Mosaico")
+            with gr.Row():
+                fabric_strength = gr.Slider(0.0, 1.0, value=1.0, step=0.05, label="Fuerza de la tela")
+                fabric_shading = gr.Slider(0.0, 1.5, value=1.0, step=0.05, label="Conservar sombras de la prenda")
+                fabric_detail = gr.Slider(0.0, 1.0, value=0.0, step=0.05, label="Conservar detalles (costuras)")
+                fabric_brightness = gr.Slider(0.5, 1.8, value=1.0, step=0.05, label="Brillo de la tela")
+            with gr.Row():
+                fabric_mask_source = gr.Radio(
+                    ["auto", "tela-completa"],
+                    value="auto",
+                    label="Máscara de la prenda",
+                    info="auto = separar del fondo claro · tela-completa = toda la imagen",
+                )
+                fabric_tolerance = gr.Slider(5, 120, value=30, step=1, label="Tolerancia de fondo")
+                fabric_front_only = gr.Slider(
+                    0.2,
+                    1.0,
+                    value=1.0,
+                    step=0.05,
+                    label="Solo panel frontal (banda central)",
+                    info="1.0 = toda la prenda",
+                )
+            with gr.Row():
+                fabric_bg_mode = gr.Radio(list(BACKGROUND_MODES), value="original", label="Fondo del resultado")
+                fabric_bg_color = gr.ColorPicker(value="#ffffff", label="Color de fondo")
+
         gallery = gr.Gallery(label="Resultado", columns=4, height=420, object_fit="contain", preview=True)
         status_box = gr.Textbox(label="Progreso y log de la petición", lines=14, max_lines=24, autoscroll=True)
+
+        # Visor grande (modal): overlay a pantalla completa, oculto por defecto.
+        with gr.Column(elem_classes=["vton-modal"], visible=False) as result_modal:
+            with gr.Row():
+                gr.Markdown("### Resultado en grande")
+                close_result_modal = gr.Button("✕ Cerrar", variant="secondary", scale=0)
+            modal_image = gr.Image(
+                type="pil",
+                interactive=False,
+                height=700,
+                show_label=False,
+                buttons=["download", "fullscreen"],
+                elem_classes=["vton-image"],
+            )
 
         gr.Markdown(
             "**Notas**: la salida es siempre 576×864 (forma de entrada del modelo). "
@@ -502,6 +925,33 @@ def build_app():
             "IDM-CUSTOM, exporta `FASHN_USE_GPU_LOCK=1` antes de lanzar la UI."
         )
 
+        fabric_inputs = [
+            fabric_image,
+            fabric_enabled,
+            fabric_color,
+            fabric_bg_mode,
+            fabric_bg_color,
+            fabric_mask_source,
+            fabric_tolerance,
+            fabric_front_only,
+            fabric_scale,
+            fabric_rotation,
+            fabric_tilt_x,
+            fabric_tilt_y,
+            fabric_offset_x,
+            fabric_offset_y,
+            fabric_perspective,
+            fabric_angle,
+            fabric_brightness,
+            fabric_strength,
+            fabric_shading,
+            fabric_detail,
+            fabric_mosaic,
+            fabric_repeat_mode,
+            fabric_repeat_cm,
+            fabric_garment_width_cm,
+            fabric_repeat_px,
+        ]
         inputs = [
             person_input,
             garment_input,
@@ -514,8 +964,45 @@ def build_app():
             segmentation_free,
             provider_dropdown,
             device_choice,
+            *fabric_inputs,
         ]
-        outputs = [gallery, status_box]
+        outputs = [gallery, status_box, result_preview]
+
+        def _repeat_info(garment_image, mode, repeat_cm, garment_width_cm, repeat_px, scale):
+            """Texto en vivo: cuántos píxeles/cm mide el motivo y cuántas repeticiones hay."""
+            from fashn_vton.preprocessing.fabric import FabricTransferConfig, repeat_reference_px
+
+            if garment_image is None:
+                return "*Sube la prenda para calcular el tamaño del motivo y las repeticiones.*"
+            canvas_width = getattr(garment_image, "size", (576, 864))[0] or 576
+            config = FabricTransferConfig(
+                repeat_mode=mode,
+                repeat_cm=float(repeat_cm),
+                garment_width_cm=float(garment_width_cm),
+                repeat_px=float(repeat_px),
+                scale=float(scale),
+            )
+            reference = repeat_reference_px(config, canvas_width)
+            cm_per_repeat = reference / canvas_width * float(garment_width_cm)
+            return (
+                f"**Motivo**: {reference:.0f} px de ancho (~{cm_per_repeat:.1f} cm sobre "
+                f"{float(garment_width_cm):.0f} cm de prenda) · "
+                f"**repeticiones a lo ancho**: {canvas_width / reference:.2f}"
+            )
+
+        repeat_controls = [
+            fabric_repeat_mode,
+            fabric_repeat_cm,
+            fabric_garment_width_cm,
+            fabric_repeat_px,
+            fabric_scale,
+        ]
+        for control in [garment_input, *repeat_controls]:
+            control.change(
+                _repeat_info,
+                inputs=[garment_input, *repeat_controls],
+                outputs=[fabric_repeat_info],
+            )
 
         generate_btn.click(
             fn=generate,
@@ -524,6 +1011,29 @@ def build_app():
             api_name="tryon",
             concurrency_limit=1,
         )
+
+        fabric_preview_btn.click(
+            fn=preview_fabric,
+            inputs=[garment_input, *fabric_inputs, fabric_show_grid],
+            outputs=[fabric_preview, fabric_preview_log],
+        )
+
+        def _open_result_modal(image):
+            import gradio as gr  # noqa: F811 - import local por claridad
+
+            return gr.update(visible=True), image
+
+        def _close_result_modal():
+            import gradio as gr  # noqa: F811 - import local por claridad
+
+            return gr.update(visible=False)
+
+        show_result_modal.click(
+            fn=_open_result_modal,
+            inputs=[result_preview],
+            outputs=[result_modal, modal_image],
+        )
+        close_result_modal.click(fn=_close_result_modal, inputs=None, outputs=[result_modal])
 
         def _load_examples():
             import gradio as gr  # noqa: F811 - import local por claridad

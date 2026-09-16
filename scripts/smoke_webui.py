@@ -64,10 +64,14 @@ def _is_reference_run(settings: dict) -> bool:
 
 
 def _run(client, person: Path, garment: Path, settings: dict) -> tuple[str, str]:
-    """Una petición a /tryon; devuelve (ruta de la imagen, log de la UI)."""
+    """Una petición a /tryon; devuelve (ruta de la imagen, log de la UI).
+
+    El endpoint puede devolver más de dos salidas (p. ej. la previsualización), así
+    que se leen por posición en lugar de desempaquetar.
+    """
     from gradio_client import handle_file
 
-    gallery, log_text = client.predict(
+    response = client.predict(
         handle_file(str(person)),
         handle_file(str(garment)),
         settings["category"],
@@ -81,6 +85,8 @@ def _run(client, person: Path, garment: Path, settings: dict) -> tuple[str, str]
         settings["device"],
         api_name="/tryon",
     )
+    outputs = list(response) if isinstance(response, (tuple, list)) else [response]
+    gallery, log_text = outputs[0], outputs[1]
     images = gallery if isinstance(gallery, list) else [gallery]
     first = images[0]
     image_path = first.get("image") if isinstance(first, dict) else first
