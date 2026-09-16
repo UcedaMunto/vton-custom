@@ -1025,7 +1025,9 @@ def build_app():
                 _repeat_info,
                 inputs=[garment_input, *repeat_controls],
                 outputs=[fabric_repeat_info],
-                api_name=False,  # informativo de la UI: no hace falta exponerlo
+                # Informativo de la UI: no debe aparecer en la API (Gradio ≥ 6 usa
+                # `api_visibility`; `api_name=False` acaba creando un endpoint "false").
+                api_visibility="private",
             )
 
         generate_btn.click(
