@@ -81,8 +81,12 @@ y el estampado de la prenda con la foto de una tela **antes** de generar el try-
    interruptor solo decide si se usa al generar); en el log indica
    «vista previa (no se usa al generar)». Si no hay tela ni color, avisa y no
    cambia nada.
-3. Activa «**Aplicar tela a la prenda**» y genera. Con el acordeón inactivo el
-   resultado es exactamente el de antes (mismo `sha256`).
+3. Genera el try-on: **si hay tela (o color), se usa automáticamente** (la casilla
+   «Generar con la tela aplicada» viene activada; al subir una tela se activa sola).
+   Si la desmarcas, el log lo avisa y se genera con la prenda original (el
+   resultado vuelve a ser el de siempre, `sha256 a4d618bf…`). Junto al resultado se
+   guarda `..._s<semilla>_prenda_con_tela.png`: la prenda exacta que entró al
+   modelo, para poder auditarlo.
 
 Se **asume que la prenda está sobre fondo blanco o gris** (foto de producto): el
 sistema mide la mediana del borde y separa la prenda por distancia de color

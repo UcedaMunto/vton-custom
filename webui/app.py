@@ -314,6 +314,16 @@ def build_fabric_config(
     )
 
 
+def _should_apply_fabric(fabric_image, fabric_color, fabric_enabled) -> bool:
+    """¿Se aplica la tela al generar?
+
+    Sí cuando hay una tela subida (o un color plano distinto del blanco) **y** la
+    casilla «Generar con la tela aplicada» está activada (por defecto lo está).
+    """
+    has_fabric = fabric_image is not None or _rgb(fabric_color) != (255, 255, 255)
+    return bool(has_fabric and fabric_enabled)
+
+
 def _draw_scale_grid(image, garment_width_cm: float, step_cm: float = 10.0):
     """Cuadrícula de referencia (cada ``step_cm`` cm) para juzgar el tamaño real.
 
@@ -462,12 +472,20 @@ def preview_fabric(
     return result, log_text
 
 
-def _save_images(images, seed: int, params_log: str) -> list[Path]:
-    """Guarda cada muestra como PNG en `outputs/webui/` (gitignored)."""
+def _save_images(images, seed: int, params_log: str, garment=None) -> list[Path]:
+    """Guarda cada muestra como PNG en `outputs/webui/` (gitignored).
+
+    Si se pasa ``garment``, se guarda también la prenda exacta que entró al modelo
+    (con la tela aplicada), para poder auditar qué se generó a partir de qué.
+    """
     directory = output_dir()
     directory.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     paths = []
+    if garment is not None:
+        garment_path = directory / f"{stamp}_s{seed}_prenda_con_tela.png"
+        garment.save(garment_path)
+        paths.append(garment_path)
     for index, image in enumerate(images):
         path = directory / f"{stamp}_s{seed}_{index:02d}.png"
         image.save(path)
@@ -625,7 +643,22 @@ def generate(
             fabric_garment_width_cm,
             fabric_repeat_px,
         )
-        if fabric_config.enabled:
+        # Si hay tela (o color) configurado, el try-on la usa. La casilla
+        # «Generar con la tela aplicada» (activada por defecto) solo sirve para
+        # desactivarlo a propósito, y en ese caso se avisa en el log.
+        has_fabric = fabric_image is not None or _rgb(fabric_color) != (255, 255, 255)
+        apply_fabric = _should_apply_fabric(fabric_image, fabric_color, fabric_enabled)
+
+        if not has_fabric and fabric_enabled:
+            log("Tela activada pero sin tela ni color elegido: no hay nada que aplicar (se usa la prenda original).")
+        if has_fabric and not fabric_enabled:
+            log(
+                "AVISO: hay tela/color configurado pero «Generar con la tela aplicada» está "
+                "desactivado: el try-on usará la PRENDA ORIGINAL (actívalo para usar la tela)."
+            )
+
+        if apply_fabric:
+            fabric_config.enabled = True
             try:
                 garment_image, fabric_log = apply_fabric_to_garment(garment_image, fabric_image, fabric_config)
             except Exception as exc:  # noqa: BLE001 - se muestra en la UI
@@ -634,6 +667,7 @@ def generate(
                 raise gr.Error(f"No se pudo aplicar la tela: {exc}") from exc
             for line in fabric_log.splitlines():
                 log(line)
+            log("→ el try-on usará ESTA prenda con la tela (no la original); se guarda junto al resultado.")
             if photo_type != "flat-lay":
                 log("Nota: con la tela aplicada conviene «Tipo de foto de prenda = flat-lay» (el fondo se recompone).")
             yield None, status(), None
@@ -692,7 +726,7 @@ def generate(
             for note in segmentation.get("degraded", []) or []:
                 log(f"AVISO (degradado, resultado no óptimo): {note}")
 
-        paths = _save_images(images, seed, status())
+        paths = _save_images(images, seed, status(), garment_image if apply_fabric else None)
         for path in paths:
             log(f"Guardado: {path}")
 
@@ -809,14 +843,15 @@ def build_app():
             gr.Markdown(
                 "Sustituye el **color y el estampado** de la prenda con la foto de una tela. "
                 "Se asume que la prenda está sobre fondo **blanco o gris** (foto de producto) y el fondo "
-                "del resultado es configurable. Al activarlo, usa «Tipo de foto de prenda = **flat-lay**». "
-                "Con la tela desactivada el resultado es exactamente el de antes (mismo sha256)."
+                "del resultado es configurable. **Si subes una tela (o eliges un color), el try-on la usa "
+                "automáticamente**; con la tela activada conviene «Tipo de foto de prenda = flat-lay». "
+                "Si desmarcas «Generar con la tela aplicada», se genera con la prenda original."
             )
             with gr.Row():
                 fabric_enabled = gr.Checkbox(
-                    value=False,
-                    label="Aplicar tela a la prenda",
-                    info="Desactivado = comportamiento actual, sin cambios",
+                    value=True,
+                    label="Generar con la tela aplicada",
+                    info="Activado por defecto: si hay tela o color, el try-on los usa. Desmárcalo para comparar con la prenda original",
                 )
                 fabric_image = gr.Image(
                     label="Tela (foto del estampado)",
@@ -1043,6 +1078,15 @@ def build_app():
             inputs=[garment_input, *fabric_inputs, fabric_show_grid],
             outputs=[fabric_preview, fabric_preview_log],
             api_name="preview_fabric",
+        )
+
+        # Al subir una tela se activa «Generar con la tela aplicada» (evita el error
+        # de previsualizar con tela y generar con la prenda original).
+        fabric_image.change(
+            fn=lambda: gr.update(value=True),
+            inputs=None,
+            outputs=[fabric_enabled],
+            api_visibility="private",
         )
 
         def _open_result_modal(image):

@@ -110,3 +110,13 @@ def test_el_log_informa_del_tamano_y_las_repeticiones(webui):
     _image, log = _preview(webui, _garment_pil(), _fabric_pil(), enabled=True)
     assert "repeticiones a lo ancho" in log
     assert "12.0 cm" in log
+
+
+def test_se_aplica_al_generar_solo_con_tela_y_casilla_activa(webui):
+    """Regla del try-on: manda la tela configurada + la casilla (activada por defecto)."""
+    fabric = _fabric_pil()
+    assert webui._should_apply_fabric(fabric, "#ffffff", True) is True  # tela subida
+    assert webui._should_apply_fabric(None, "#cc2222", True) is True  # color plano elegido
+    assert webui._should_apply_fabric(fabric, "#ffffff", False) is False  # desactivado a propósito
+    assert webui._should_apply_fabric(None, "#ffffff", True) is False  # nada configurado
+    assert webui._should_apply_fabric(None, "#ffffff", False) is False
