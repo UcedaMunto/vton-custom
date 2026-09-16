@@ -1,0 +1,160 @@
+{
+  "verified_at": "2026-09-16T01:09:34Z",
+  "baseline": "baseline-2026-09-15",
+  "weights": {
+    "dir": "/home/uceda/Documents/fashn-vton-1.5/weights",
+    "sha256": "d6cd38286885bc29fa487ea9383f80ffeb95862e7747c630d42c5d3c05bdd35a",
+    "same_as_baseline": true
+  },
+  "environment": {
+    "python": "3.11.16",
+    "torch": "2.14.0+cu130",
+    "cuda": "13.0",
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "device": "cuda",
+    "dtype": "torch.bfloat16",
+    "package_version": "1.5.0+commercial.1",
+    "git_commit": "ed86694"
+  },
+  "runs": [
+    {
+      "pair": "ejemplo_tops",
+      "seed": 42,
+      "sha256": "a4d618bf4d50910374caf3770ee580d9a7df4b7c9a65d4a51831033ea631c53e",
+      "sha256_matches_baseline": true,
+      "ssim_vs_baseline": 1.0,
+      "mae_vs_baseline": 0.0,
+      "seconds": 12.68,
+      "metrics": {
+        "sharpness": 165.76347864487144,
+        "outside_change": 17.6236572265625,
+        "identity_preservation": 0.9794880151748657,
+        "garment_change": 0.7956940387320134,
+        "color_fidelity": 0.6056137269984941,
+        "pattern_fidelity": 0.2926497459411621,
+        "failure": false
+      },
+      "degraded": []
+    },
+    {
+      "pair": "ejemplo_tops",
+      "seed": 1234,
+      "sha256": "e7d5163f5206b758cc2e33a59736abc495cb4f7b7c2db0307659c632200cf6fc",
+      "sha256_matches_baseline": true,
+      "ssim_vs_baseline": 1.0,
+      "mae_vs_baseline": 0.0,
+      "seconds": 12.06,
+      "metrics": {
+        "sharpness": 173.58899846556477,
+        "outside_change": 19.264450073242188,
+        "identity_preservation": 0.9500671625137329,
+        "garment_change": 0.8512604132857298,
+        "color_fidelity": 0.6372247228676917,
+        "pattern_fidelity": 0.3402470350265503,
+        "failure": false
+      },
+      "degraded": []
+    }
+  ],
+  "candidate_summary": {
+    "runs": 2,
+    "identity_preservation": 0.9647775888442993,
+    "outside_change": 18.444053649902344,
+    "color_fidelity": 0.621419224933093,
+    "pattern_fidelity": 0.3164483904838562,
+    "garment_change": 0.8234772260088716,
+    "sharpness": 169.6762385552181,
+    "failures": 0,
+    "failure_rate": 0.0,
+    "score": 0.7587625704975755,
+    "passes_gate": true
+  },
+  "baseline_summary": {
+    "runs": 2,
+    "identity_preservation": 0.9647775888442993,
+    "outside_change": 18.444053649902344,
+    "color_fidelity": 0.621419224933093,
+    "pattern_fidelity": 0.3164483904838562,
+    "garment_change": 0.8234772260088716,
+    "sharpness": 169.6762385552181,
+    "failures": 0,
+    "failure_rate": 0.0,
+    "score": 0.7587625704975755,
+    "passes_gate": true
+  },
+  "mean_ssim_vs_baseline": 1.0,
+  "regression": {
+    "ok": true,
+    "reasons": [],
+    "missing": [],
+    "improved": [],
+    "rows": [
+      {
+        "name": "identity_preservation",
+        "baseline": 0.9647775888442993,
+        "candidate": 0.9647775888442993,
+        "relative": 0.0,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "color_fidelity",
+        "baseline": 0.621419224933093,
+        "candidate": 0.621419224933093,
+        "relative": 0.0,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "pattern_fidelity",
+        "baseline": 0.3164483904838562,
+        "candidate": 0.3164483904838562,
+        "relative": 0.0,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "garment_change",
+        "baseline": 0.8234772260088716,
+        "candidate": 0.8234772260088716,
+        "relative": 0.0,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "sharpness",
+        "baseline": 169.6762385552181,
+        "candidate": 169.6762385552181,
+        "relative": 0.0,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "score",
+        "baseline": 0.7587625704975755,
+        "candidate": 0.7587625704975755,
+        "relative": 0.0,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "outside_change",
+        "baseline": 18.444053649902344,
+        "candidate": 18.444053649902344,
+        "relative": 0.0,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "failure_rate",
+        "baseline": 0.0,
+        "candidate": 0.0,
+        "relative": null,
+        "ok": true,
+        "reason": ""
+      }
+    ]
+  },
+  "decision": "promote",
+  "reasons": []
+}

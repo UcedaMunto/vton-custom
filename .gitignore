@@ -85,6 +85,10 @@ Thumbs.db
 *.log
 logs/
 
+# Baselines de entrenamiento: se versiona el manifest/informes, no las imágenes
+baselines/*/images/
+baselines/*/candidate/
+
 # Output directories
 outputs/
 results/

@@ -1,0 +1,30 @@
+{
+  "updated_at": "2026-09-16T01:14:49Z",
+  "active": "baseline-2026-09-15",
+  "entries": [
+    {
+      "tag": "baseline-2026-09-15",
+      "sha256": "d6cd38286885bc29fa487ea9383f80ffeb95862e7747c630d42c5d3c05bdd35a",
+      "bytes": 1943668048,
+      "snapshot_path": "weights/registry/baseline-2026-09-15/model.safetensors",
+      "updated_at": "2026-09-16T01:14:49Z",
+      "source": "rollback",
+      "notes": "estado comercial verificado (sha256 a4d618bf en salida)",
+      "created_at": "2026-09-16T01:14:22Z"
+    }
+  ],
+  "history": [
+    {
+      "at": "2026-09-16T01:14:22Z",
+      "action": "snapshot",
+      "tag": "baseline-2026-09-15",
+      "sha256": "d6cd38286885bc29fa487ea9383f80ffeb95862e7747c630d42c5d3c05bdd35a"
+    },
+    {
+      "at": "2026-09-16T01:14:49Z",
+      "action": "rollback",
+      "tag": "baseline-2026-09-15",
+      "sha256": "d6cd38286885bc29fa487ea9383f80ffeb95862e7747c630d42c5d3c05bdd35a"
+    }
+  ]
+}

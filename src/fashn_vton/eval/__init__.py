@@ -10,11 +10,23 @@ from .quality_gates import (
     wasserstein_distance,
     weighted_score,
 )
+from .regression import (
+    HIGHER_IS_BETTER,
+    LOWER_IS_BETTER,
+    TRACKED_METRICS,
+    RegressionReport,
+    compare_metrics,
+)
 
 __all__ = [
+    "HIGHER_IS_BETTER",
+    "LOWER_IS_BETTER",
+    "TRACKED_METRICS",
     "QualityGateConfig",
+    "RegressionReport",
     "aggregate",
     "color_fidelity",
+    "compare_metrics",
     "evaluate",
     "passes_quality_gate",
     "sharpness",
