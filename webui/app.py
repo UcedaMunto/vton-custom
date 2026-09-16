@@ -354,6 +354,21 @@ def apply_fabric_to_garment(garment, fabric_image, config, show_grid: bool = Fal
             fabric_array = np.asarray(fabric_image)[..., :3]
 
     result, _mask, info = retexture_garment(np.asarray(garment.convert("RGB")), fabric_array, config)
+    if not info.applied and config.enabled and (fabric_array is not None or config.flat_color is not None):
+        # Si la máscara automática no encontró prenda (fondo con textura, recorte
+        # raro…), se reintenta aplicando la tela a toda la imagen en vez de no hacer
+        # nada: es lo que el usuario espera al pulsar «previsualizar».
+        from dataclasses import replace
+
+        fallback, _fallback_mask, fallback_info = retexture_garment(
+            np.asarray(garment.convert("RGB")),
+            fabric_array,
+            replace(config, mask_source="tela-completa"),
+        )
+        if fallback_info.applied:
+            result, info = fallback, fallback_info
+            info.notes.append("máscara automática vacía: tela aplicada a toda la imagen («tela-completa»)")
+
     image = Image.fromarray(result)
     lines = [info.describe(), info.describe_repeat()]
     if info.background_uniformity is not None:
@@ -400,6 +415,10 @@ def preview_fabric(
 
     if garment_image is None:
         raise gr.Error("Sube una imagen de prenda para previsualizar la tela.")
+    if fabric_image is None and _rgb(fabric_color) == (255, 255, 255):
+        return garment_image, (
+            "Sube una **tela** o elige un **color plano** (distinto del blanco) para ver la previsualización."
+        )
 
     config = build_fabric_config(
         fabric_enabled,
@@ -427,8 +446,10 @@ def preview_fabric(
         fabric_garment_width_cm,
         fabric_repeat_px,
     )
-    if not config.enabled:
-        return garment_image, "Tela desactivada: activa «Aplicar tela a la prenda» para ver el resultado."
+    # El botón de previsualización aplica SIEMPRE la tela: para eso se pulsa.
+    # (El interruptor «Aplicar tela a la prenda» decide si se usa al generar.)
+    config.enabled = True
+    log_line = "vista previa (no se usa al generar)" if not fabric_enabled else ""
 
     try:
         result, log_text = apply_fabric_to_garment(
@@ -436,6 +457,8 @@ def preview_fabric(
         )
     except Exception as exc:  # noqa: BLE001 - se muestra en la UI
         raise gr.Error(f"No se pudo aplicar la tela: {type(exc).__name__}: {exc}") from exc
+    if log_line:
+        log_text = f"{log_text}\n  ({log_line})"
     return result, log_text
 
 
@@ -1002,6 +1025,7 @@ def build_app():
                 _repeat_info,
                 inputs=[garment_input, *repeat_controls],
                 outputs=[fabric_repeat_info],
+                api_name=False,  # informativo de la UI: no hace falta exponerlo
             )
 
         generate_btn.click(
@@ -1016,6 +1040,7 @@ def build_app():
             fn=preview_fabric,
             inputs=[garment_input, *fabric_inputs, fabric_show_grid],
             outputs=[fabric_preview, fabric_preview_log],
+            api_name="preview_fabric",
         )
 
         def _open_result_modal(image):

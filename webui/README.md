@@ -77,6 +77,10 @@ y el estampado de la prenda con la foto de una tela **antes** de generar el try-
 1. Sube la **tela** (una foto del estampado; cuanto más plana y repetible, mejor)
    o elige un **color plano** si solo quieres cambiar el color.
 2. Pulsa «**Previsualizar prenda con la tela**» para ver el resultado y ajustar.
+   Este botón aplica la tela **siempre**, aunque el interruptor esté apagado (el
+   interruptor solo decide si se usa al generar); en el log indica
+   «vista previa (no se usa al generar)». Si no hay tela ni color, avisa y no
+   cambia nada.
 3. Activa «**Aplicar tela a la prenda**» y genera. Con el acordeón inactivo el
    resultado es exactamente el de antes (mismo `sha256`).
 
