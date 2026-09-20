@@ -10,9 +10,11 @@
 
 ## Dónde se ejecuta (infraestructura)
 
-Todo esto corre en **`nodo-gpu-1` = `server`** (IP fija `192.168.0.100`), la **única**
-máquina con GPU del clúster de 3 nodos (`nodo-orq` = `anfitrion` `192.168.0.10`;
-`nodo-cpu-1` = `asus-tuf` `192.168.0.20`, sin GPU). Implicaciones prácticas:
+Todo esto corre en **`nodo-gpu-1`**, la máquina con la **RTX 3060** del clúster (que es
+también la del servicio, la UI local y `IDM-CUSTOM`); el clúster tiene 3 nodos
+(control-plane + 2 workers) cuya **direccionamiento no se versiona aquí**: está en
+`~/.vton-cluster.env` (modo 600, en el nodo de operación) y en
+[`../../kubernetes/`](../../kubernetes/) (fuera de este repositorio). Implicaciones:
 
 - El entrenamiento **comparte la RTX 3060** con el servicio del clúster, la UI local y
   `IDM-CUSTOM`: usar el turno único (`FASHN_USE_GPU_LOCK=1` en la UI /
@@ -22,10 +24,10 @@ máquina con GPU del clúster de 3 nodos (`nodo-orq` = `anfitrion` `192.168.0.10
   monta **solo** `model.safetensors` + `dwpose/` (nunca `candidates/`), y al promover un
   candidato hay que reiniciar el worker:
   `kubectl -n vton rollout restart daemonset/vton-gpu-worker`.
-- Acceso a los otros nodos desde `server`: `ssh uceda@192.168.0.10` y
-  `ssh uceda@192.168.0.20` (llave `~/.ssh/id_ed25519`, verificado 2026-09-19).
-- Inventario de red, IPs, cortafuegos y hallazgos:
-  [`../../kubernetes/01_RED_E_INVENTARIO.md`](../../kubernetes/01_RED_E_INVENTARIO.md).
+- Acceso a los otros nodos desde el nodo GPU por SSH con clave (`~/.ssh/id_ed25519`); los
+  destinos están en `~/.vton-cluster.env` (`VTON_NODO_ORQ_IP`, `VTON_NODO_CPU1_IP`).
+- Inventario de red, IPs y cortafuegos: `../../kubernetes/01_RED_E_INVENTARIO.md` (local,
+  no versionado aquí).
 
 ---
 

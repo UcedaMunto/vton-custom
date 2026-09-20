@@ -94,6 +94,14 @@ baselines/*/candidate/
 # investigación); aquí solo se generan manifiestos y cachés desechables.
 datos/
 
+# Datos locales de infraestructura y credenciales: NUNCA versionar.
+# Los valores reales viven en ~/.vton-cluster.env y ~/.vton-secrets.env (modo 600).
+.env
+.env.*
+*.env
+*.local.env
+!*.env.example
+
 # Output directories
 outputs/
 results/
