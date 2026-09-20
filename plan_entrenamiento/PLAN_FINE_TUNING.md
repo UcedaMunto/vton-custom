@@ -169,24 +169,37 @@ manifiesto).
 
 ## 5. Arnés a construir (mapa de ficheros)
 
+> **Actualización 2026-09-17:** el arnés está **implementado, probado y ejecutado**
+> sobre datos reales (DressCode) y los pesos comerciales. La guía paso a paso está
+> en [`GUIA_EJECUCION_ENTRENAMIENTO.md`](GUIA_EJECUCION_ENTRENAMIENTO.md).
+
 | Fichero | Estado | Qué hace |
 |---|---|---|
 | `src/fashn_vton/eval/regression.py` | ✅ hecho | Comparación de métricas contra el baseline (guardia) |
 | `tests/test_regression_gate.py` | ✅ hecho (11 pruebas) | Prueba la guardia: mejora/regresión/tolerancias/faltantes |
 | `scripts/baseline.py` | ✅ hecho y probado | `capture` (congelar) y `verify` (decidir) |
 | `baselines/<name>/manifest.json` | ✅ hecho | Huella: pesos, entorno, semillas, sha256 y métricas por imagen |
-| `scripts/model_registry.py` | ⏳ | `snapshot` / `list` / `promote` / `rollback` de pesos con hash |
-| `src/fashn_vton/train/lora.py` | ⏳ | Inyectar/quitar/mergear adaptadores LoRA en el MMDiT |
-| `src/fashn_vton/train/data.py` | ⏳ | Dataset de trípletas + CSV de procedencia + preprocesado reutilizado del pipeline |
-| `src/fashn_vton/train/trainer.py` | ⏳ | Bucle rectified-flow, grad checkpointing, AdamW (8-bit opcional), resume, EMA |
-| `src/fashn_vton/train/callbacks.py` | ⏳ | `verify` automático cada N pasos y parada temprana |
-| `scripts/make_synthetic_triplets.py` | ⏳ | Generar candidatos + puntuar + filtrado top-k (Opción A) |
-| `scripts/fine_tune.py` | ⏳ | CLI: `--data`, `--rank`, `--steps`, `--lr`, `--out weights/candidates/<tag>` |
-| `tests/test_lora_injection.py` | ⏳ | LoRA con B=0 no cambia la salida; merge correcto; solo los adaptadores tienen gradiente |
-| `tests/test_training_step.py` | ⏳ | Un paso de entrenamiento real (loss finita, VRAM medida, checkpoint escrito) |
+| `scripts/model_registry.py` | ✅ hecho (+ `promote` consulta la procedencia NC) | `snapshot` / `list` / `promote` / `rollback` de pesos con hash |
+| `src/fashn_vton/train/lora.py` | ✅ hecho y probado | Inyectar/mergear/quitar adaptadores LoRA en el MMDiT (sin `peft`) |
+| `src/fashn_vton/train/data.py` | ✅ hecho y probado | CSV de pares + dataset con el preprocesado exacto de la inferencia |
+| `src/fashn_vton/train/trainer.py` | ✅ hecho y ejecutado en GPU | Bucle rectified-flow, grad checkpointing, AdamW, resume, logging, merge |
+| `src/fashn_vton/train/nc_policy.py` | ✅ hecho y probado | Puertas NC: entrenar (opt-in) y promover (bloqueo) |
+| `src/fashn_vton/train/callbacks.py` | 🔜 pendiente | `verify` automático cada N pasos y parada temprana (hoy se verifica a mano) |
+| `scripts/make_synthetic_triplets.py` | 🔜 pendiente | Opción A del §3: candidatos sintéticos + puntuación top-k |
+| `scripts/prepare_nc_dataset.py` | ✅ hecho y ejecutado | DressCode / prep IDM-VTON → `pairs.csv` + `provenance.json` + `NOTICE.md` |
+| `scripts/fine_tune.py` | ✅ hecho y ejecutado | CLI: `--pairs`, `--rank`, `--steps`, `--lr`, `--out weights/candidates/<tag>` |
+| `tests/test_train_lora.py` | ✅ hecho | LoRA con B=0 no cambia la salida; merge exacto; solo el adaptador tiene gradiente |
+| `tests/test_train_data.py` | ✅ hecho | Dataset, CSV, enmascarado agnóstico, caché de poses |
+| `tests/test_train_step.py` | ✅ hecho | Entrenamiento real de punta a punta con un MMDiT diminuto (loss finita, checkpoint, resume) |
+| `tests/test_nc_policy.py` | ✅ hecho | Política NC de entrada y salida |
+| `plan_entrenamiento/GUIA_EJECUCION_ENTRENAMIENTO.md` | ✅ hecho | Guía operativa: dataset, comandos, costes medidos y problemas conocidos |
 
 Regla de diseño: **el pipeline de inferencia no se toca**. Todo lo de entrenamiento
 vive en `src/fashn_vton/train/` y en `scripts/`, y la salida es un checkpoint normal.
+
+Medido el 2026-09-17 (RTX 3060 12 GB, pesos reales, DressCode): LoRA r=16 con
+7.700.480 params entrenables (0,79 % de 979 M), **15,3 s/paso** (batch 1, acumulación
+4, 576×864, bf16, gradient checkpointing) y **VRAM pico 3,09 GiB** → 1.000 pasos ≈ 4,3 h.
 
 ---
 

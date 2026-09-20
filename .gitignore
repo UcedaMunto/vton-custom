@@ -89,6 +89,11 @@ logs/
 baselines/*/images/
 baselines/*/candidate/
 
+# Datos de entrenamiento (CSV de pares, procedencia, caché de poses y subconjuntos).
+# Los datasets originales viven FUERA del repo a propósito (licencias de
+# investigación); aquí solo se generan manifiestos y cachés desechables.
+datos/
+
 # Output directories
 outputs/
 results/

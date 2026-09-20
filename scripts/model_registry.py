@@ -35,6 +35,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from fashn_vton.compliance import sha256_of_file  # noqa: E402
+from fashn_vton.train.nc_policy import (  # noqa: E402
+    NonCommercialCandidateError,
+    assert_commercially_promotable,
+    provenance_banner,
+)
 
 REGISTRY_DIR = ROOT / "model_registry"
 REGISTRY_FILE = REGISTRY_DIR / "registry.json"
@@ -165,10 +170,24 @@ def cmd_current(args) -> int:
 
 def cmd_promote(args) -> int:
     registry = _load()
-    candidate = Path(args.candidate) / "model.safetensors"
+    candidate_dir = Path(args.candidate)
+    candidate = candidate_dir / "model.safetensors"
     if not candidate.is_file():
         print(f"ERROR: no existe {candidate}")
         return 2
+
+    # Guardia de procedencia (ver plan_entrenamiento/GUIA_EJECUCION_ENTRENAMIENTO.md):
+    # un candidato entrenado con datos no comerciales (VITON-HD/DressCode) no puede
+    # convertirse en el modelo comercial activo sin un opt-in explícito.
+    try:
+        provenance = assert_commercially_promotable(candidate_dir, allow_nc=bool(getattr(args, "allow_nc", False)))
+    except NonCommercialCandidateError as exc:
+        print(f"ERROR: {exc}")
+        return 3
+    if provenance:
+        print(f"Procedencia: {provenance_banner(provenance)}")
+        if provenance.get("commercial_use") is False:
+            print("AVISO: --allow-nc aceptado: este candidato NO es comercial y NO debería servirse en producción.")
 
     active = _active_weights(args)
     digest = sha256_of_file(candidate)
@@ -235,6 +254,11 @@ def _build_parser() -> argparse.ArgumentParser:
     promote.add_argument("--candidate", required=True, help="directorio con model.safetensors")
     promote.add_argument("--tag", required=True)
     promote.add_argument("--notes", default="")
+    promote.add_argument(
+        "--allow-nc",
+        action="store_true",
+        help="permite promover un candidato entrenado con datos NO comerciales (uso interno; riesgo legal)",
+    )
 
     rollback = sub.add_parser("rollback", parents=[common], help="volver a un estado registrado")
     rollback.add_argument("--tag", required=True)
