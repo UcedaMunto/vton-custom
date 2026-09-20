@@ -117,6 +117,38 @@ Salidas: `outputs/benchmark/benchmark.csv`, `benchmark_summary.json` (incluye
   `./weights` en tiempo de ejecución. *No verificada localmente: esta máquina no
   tiene Docker instalado.*
 
+## Despliegue en el clúster de 3 nodos (2026-09-19)
+
+El servicio comercial (frontend + API + workers) se despliega en un clúster k3s de **3
+máquinas** de la LAN `192.168.0.0/24`. Este repositorio aporta **la imagen del worker GPU**
+y el modelo; la orquestación vive en [`../kubernetes/`](../kubernetes/).
+
+| Nodo | Hostname real | IP (fija) | Hardware | Rol en el despliegue |
+|---|---|---|---|---|
+| `nodo-orq` | `anfitrion` | **192.168.0.10** | 12 vCPU / 30 GiB / 229 GB libres, sin GPU | control-plane k3s, ingress+TLS, frontend `vton-web`, API Gateway, Redis, MinIO transitorio, workers CPU |
+| `nodo-gpu-1` | `server` | **192.168.0.100** | 6 vCPU / 32 GiB, **RTX 3060 12 GB** | worker GPU (`DaemonSet`) con `TryOnPipeline`; es también la máquina de entrenamiento y de la UI local |
+| `nodo-cpu-1` | `asus-tuf` | **192.168.0.20** | 8 vCPU / 15 GiB / 208 GB libres, sin GPU | preprocesado CPU (validación, resize, pose) |
+
+Notas de operación:
+
+- **Acceso SSH**: llave `~/.ssh/id_ed25519` de `server` copiada a `uceda@192.168.0.10` y
+  `uceda@192.168.0.20`; acceso sin contraseña **verificado** el 2026-09-19 18:47. Detalle,
+  hallazgos de red y comandos:
+  [`../kubernetes/01_RED_E_INVENTARIO.md`](../kubernetes/01_RED_E_INVENTARIO.md).
+- **La GPU es compartida**: el worker del clúster, la UI local (`run_web.sh`), el
+  entrenamiento (`plan_entrenamiento/`) y `IDM-CUSTOM` usan la misma RTX 3060 de `server`
+  mediante el turno único `~/.idm_gpu.lock` (variables `VTON_USE_GPU_LOCK` /
+  `VTON_GPU_LOCK_PATH`).
+- **Los pesos no se hornean en la imagen**: el worker los monta en solo lectura desde
+  `/home/uceda/Documents/fashn-vton-1.5/weights` (únicamente `model.safetensors` +
+  `dwpose/`, nunca `candidates/`). Tras promover un candidato:
+  `kubectl -n vton rollout restart daemonset/vton-gpu-worker`.
+- **Cero retención**: las imágenes de los clientes no se conservan en el clúster (plan §11
+  de [`../kubernetes/00_PLAN_ARQUITECTURA.md`](../kubernetes/00_PLAN_ARQUITECTURA.md)); este
+  repositorio no almacena material de terceros.
+- **Estado**: despliegue **planificado, aún no levantado** (faltan IPs fijas, cortafuegos e
+  instalación de k3s; ver el plan de Kubernetes).
+
 ## Hoja de ruta (etapas 2 y 3)
 
 1. ~~**SAM 2** (`sam2`)~~ ✅ implementado y verificado (etapa 2).

@@ -49,6 +49,13 @@ api = [
     "uvicorn>=0.27",
     "python-multipart>=0.0.9",
 ]
+# Componentes del despliegue distribuido (cola Redis + MinIO transitorio):
+# queue_worker, preprocess_worker, gateway y web. Ver
+# kubernetes/00_PLAN_ARQUITECTURA.md (revision 3) y kubernetes/02_ESTADO_DE_EJECUCION.md.
+cluster = [
+    "redis>=5.0",
+    "boto3>=1.34",
+]
 # Interfaz web de pruebas (ver webui/app.py)
 webui = [
     "gradio>=5.0",
