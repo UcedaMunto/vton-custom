@@ -256,6 +256,16 @@ degradación aparezca (o no) según el proveedor:
 ./run_fashn_vton.sh python scripts/smoke_webui.py --providers none sam2 --garment-photo-type model
 ```
 
+Y [`../scripts/smoke_fabric.py`](../scripts/smoke_fabric.py) comprueba la **tela
+propia** de punta a punta (genera su propia tela sintética, no depende de ficheros
+externos): que la previsualización aplique la tela aunque la casilla esté apagada,
+que el try-on con tela guarde `..._prenda_con_tela.png` y dé un resultado distinto
+de la referencia, y que sin tela avise y vuelva a la referencia `a4d618bf…`:
+
+```bash
+./run_fashn_vton.sh python scripts/smoke_fabric.py
+```
+
 Compara el **PNG guardado** en `outputs/webui/` (la galería sirve una copia
 re-codificada a WebP en `/tmp/gradio/...`, cuyo hash no es comparable).
 
