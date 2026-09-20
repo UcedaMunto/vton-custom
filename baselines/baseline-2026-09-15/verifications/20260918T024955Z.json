@@ -1,0 +1,160 @@
+{
+  "verified_at": "2026-09-18T02:49:55Z",
+  "baseline": "baseline-2026-09-15",
+  "weights": {
+    "dir": "/home/uceda/Documents/fashn-vton-1.5/weights/candidates/smoke",
+    "sha256": "1ac338de65942946110a525374dc35b01551f026521e7f55c2ff8be841b3f131",
+    "same_as_baseline": false
+  },
+  "environment": {
+    "python": "3.11.16",
+    "torch": "2.14.0+cu130",
+    "cuda": "13.0",
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "device": "cuda",
+    "dtype": "torch.bfloat16",
+    "package_version": "1.5.0+commercial.1",
+    "git_commit": "93d30d7"
+  },
+  "runs": [
+    {
+      "pair": "ejemplo_tops",
+      "seed": 42,
+      "sha256": "b09d68b88906fc65af1f8bcca1fc1fd8e9722bce1ea64830c1eb4367a7ef66fd",
+      "sha256_matches_baseline": false,
+      "ssim_vs_baseline": 0.9971,
+      "mae_vs_baseline": 0.32,
+      "seconds": 12.88,
+      "metrics": {
+        "sharpness": 165.1171994317054,
+        "outside_change": 17.726823806762695,
+        "identity_preservation": 0.9794594049453735,
+        "garment_change": 0.7954992967651195,
+        "color_fidelity": 0.6058645014761238,
+        "pattern_fidelity": 0.29238077998161316,
+        "failure": false
+      },
+      "degraded": []
+    },
+    {
+      "pair": "ejemplo_tops",
+      "seed": 1234,
+      "sha256": "6cf8bfee9c828b29e72d2a07f39327612f193e38c415f30847ce5f24b980eb85",
+      "sha256_matches_baseline": false,
+      "ssim_vs_baseline": 0.9972,
+      "mae_vs_baseline": 0.3,
+      "seconds": 11.88,
+      "metrics": {
+        "sharpness": 173.90197728933856,
+        "outside_change": 19.341625213623047,
+        "identity_preservation": 0.9499290585517883,
+        "garment_change": 0.8511305853078005,
+        "color_fidelity": 0.6373353665031445,
+        "pattern_fidelity": 0.34079429507255554,
+        "failure": false
+      },
+      "degraded": []
+    }
+  ],
+  "candidate_summary": {
+    "runs": 2,
+    "identity_preservation": 0.9646942317485809,
+    "outside_change": 18.53422451019287,
+    "color_fidelity": 0.6215999339896341,
+    "pattern_fidelity": 0.31658753752708435,
+    "garment_change": 0.82331494103646,
+    "sharpness": 169.50958836052197,
+    "failures": 0,
+    "failure_rate": 0.0,
+    "score": 0.7588376530932128,
+    "passes_gate": true
+  },
+  "baseline_summary": {
+    "runs": 2,
+    "identity_preservation": 0.9647775888442993,
+    "outside_change": 18.444053649902344,
+    "color_fidelity": 0.621419224933093,
+    "pattern_fidelity": 0.3164483904838562,
+    "garment_change": 0.8234772260088716,
+    "sharpness": 169.6762385552181,
+    "failures": 0,
+    "failure_rate": 0.0,
+    "score": 0.7587625704975755,
+    "passes_gate": true
+  },
+  "mean_ssim_vs_baseline": 0.9971,
+  "regression": {
+    "ok": true,
+    "reasons": [],
+    "missing": [],
+    "improved": [],
+    "rows": [
+      {
+        "name": "identity_preservation",
+        "baseline": 0.9647775888442993,
+        "candidate": 0.9646942317485809,
+        "relative": -8.640032343437486e-05,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "color_fidelity",
+        "baseline": 0.621419224933093,
+        "candidate": 0.6215999339896341,
+        "relative": 0.00029080055667824383,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "pattern_fidelity",
+        "baseline": 0.3164483904838562,
+        "candidate": 0.31658753752708435,
+        "relative": 0.00043971480788823316,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "garment_change",
+        "baseline": 0.8234772260088716,
+        "candidate": 0.82331494103646,
+        "relative": -0.00019707281183501166,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "sharpness",
+        "baseline": 169.6762385552181,
+        "candidate": 169.50958836052197,
+        "relative": -0.0009821657771008315,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "score",
+        "baseline": 0.7587625704975755,
+        "candidate": 0.7588376530932128,
+        "relative": 9.895400558324821e-05,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "outside_change",
+        "baseline": 18.444053649902344,
+        "candidate": 18.53422451019287,
+        "relative": 0.004888885166033161,
+        "ok": true,
+        "reason": ""
+      },
+      {
+        "name": "failure_rate",
+        "baseline": 0.0,
+        "candidate": 0.0,
+        "relative": null,
+        "ok": true,
+        "reason": ""
+      }
+    ]
+  },
+  "decision": "promote",
+  "reasons": []
+}
